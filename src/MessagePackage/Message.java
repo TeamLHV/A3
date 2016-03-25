@@ -37,6 +37,7 @@ public class Message implements Serializable
 	private int MessageId;		// Message Id is defined by the participant.
 	private long SenderId;		// Id assigned at registration time by the message manager. The ID for every message is
 								// set by the MessageManagerInterface before the message is sent to the message manager.
+	private String encryptedToken;
 
 	public Message(int MsgId, String Text )
 	{
@@ -126,5 +127,15 @@ public class Message implements Serializable
 		return MessageText;
 
 	} // GetMessage
+	
+	public String GetEncryptedToken()
+	{
+		return encryptedToken;
+	}
+	
+	public void SetEncryptedToken(String token)
+	{
+		encryptedToken = token;
+	}
 
 } // Message class

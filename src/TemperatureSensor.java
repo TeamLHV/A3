@@ -24,11 +24,13 @@
 import InstrumentationPackage.*;
 import MessagePackage.*;
 import java.util.*;
+import SecurityPackage.*;
 
 class TemperatureSensor
 {
 	public static void main(String args[])
 	{
+		
 		String MsgMgrIP;				// Message Manager IP address
 		Message Msg = null;				// Message object
 		MessageQueue eq = null;			// Message Queue
@@ -351,12 +353,16 @@ class TemperatureSensor
 		// Here we create the message.
 
 		Message msg = new Message( (int) 1, String.valueOf(temperature) );
-
+		
 		// Here we send the message to the message manager.
 
 		try
 		{
+			// Security added: Generate an encrypted token for the message
+			msg.SetEncryptedToken(MessageEncryptor.encrypt(String.valueOf(msg.GetMessageId())));
+
 			ei.SendMessage( msg );
+			
 			//System.out.println( "Sent Temp Message" );
 
 		} // try

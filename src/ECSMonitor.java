@@ -24,6 +24,8 @@
 ******************************************************************************************************************/
 import InstrumentationPackage.*;
 import MessagePackage.*;
+import SecurityPackage.MessageEncryptor;
+
 import java.util.*;
 
 class ECSMonitor extends Thread
@@ -157,7 +159,22 @@ class ECSMonitor extends Thread
 				for ( int i = 0; i < qlen; i++ )
 				{
 					Msg = eq.GetMessage();
-
+					
+					// Security added: Validate the message from encrypted token before proceeding further
+					
+					try {
+						if (!MessageEncryptor.isGranted(Msg))
+						{
+							mw.WriteMessage("Intrusion!!!!");
+							continue;
+						}
+					} catch (Exception ex) {
+						continue;
+					}
+					
+					
+					mw.WriteMessage("Granted!");
+					
 					if ( Msg.GetMessageId() == 1 ) // Temperature reading
 					{
 						try
