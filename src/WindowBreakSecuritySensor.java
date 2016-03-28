@@ -107,18 +107,17 @@ class WindowBreakSecuritySensor
 			{
 				try
 				{
-					Message msg = new Message( (int) 12, "W0");
-					String message = "Window safe";
 					count++;
 					if(count%5==0){
+						Message msg = new Message( (int) 12, "W0");
+						String message = "Window safe";
 						msg = new Message( (int) 12, "W1");
 						message = "Window unsafe..please check";
 						count = 0;
+						em.SendMessage(msg);
+						eq = em.GetMessageQueue();
+						mw.WriteMessage(message);
 					}
-					em.SendMessage(msg);
-					eq = em.GetMessageQueue();
-					mw.WriteMessage(message);
-
 				} // try
 				catch( Exception e )
 				{

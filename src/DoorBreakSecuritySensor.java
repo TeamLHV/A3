@@ -109,18 +109,17 @@ class DoorBreakSecuritySensor
 			{
 				try
 				{
-					Message msg = new Message( (int) 11, "D0");
-					String message = "Door safe";
 					count++;
 					if(count%3==0){
+						Message msg = new Message( (int) 11, "D0");
+						String message = "Door safe";
 						msg = new Message( (int) 11, "D1");
 						message = "Door unsafe..please check";
 						count = 0;
+						em.SendMessage(msg);
+						eq = em.GetMessageQueue();
+						mw.WriteMessage(message);
 					}
-					em.SendMessage(msg);
-					eq = em.GetMessageQueue();
-					mw.WriteMessage(message);
-
 				} // try
 				catch( Exception e )
 				{

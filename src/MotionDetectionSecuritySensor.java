@@ -107,18 +107,17 @@ class MotionDetectionSecuritySensor
 			{
 				try
 				{
-					Message msg = new Message( (int) 13, "M0");
-					String message = "No motion detected - safe";
 					count++;
 					if(count%7==0){
+						Message msg = new Message( (int) 13, "M0");
+						String message = "No motion detected - safe";
 						msg = new Message( (int) 13, "M1");
 						message = "Motion detected - unsafe..please check";
 						count = 0;
+						em.SendMessage(msg);
+						eq = em.GetMessageQueue();
+						mw.WriteMessage(message);
 					}
-					em.SendMessage(msg);
-					eq = em.GetMessageQueue();
-					mw.WriteMessage(message);
-
 				} // try
 				catch( Exception e )
 				{
