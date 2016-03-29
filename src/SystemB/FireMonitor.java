@@ -20,6 +20,7 @@ import InstrumentationPackage.MessageWindow;
 import MessagePackage.Message;
 import MessagePackage.MessageManagerInterface;
 import MessagePackage.MessageQueue;
+import SecurityPackage.MessageEncryptor;
 
 class FireMonitor extends Thread {
 	private FireConsole console;
@@ -30,6 +31,8 @@ class FireMonitor extends Thread {
 	MessageWindow mw = null; // This is the message window
 	Indicator fi; // Fire alarm indicator
 	Indicator si; // Sprinkler indicator
+	private Message pendingMsg = null;
+	private int noSensorMessage = 0;
 
 	public FireMonitor(FireConsole console) {
 		// message manager is on the local system
@@ -75,6 +78,7 @@ class FireMonitor extends Thread {
 		int Delay = 1000; // The loop delay (1 second)
 		boolean Done = false; // Loop termination flag
 		boolean turnOnSprinkler = false;
+		boolean isOnFire = false;
 
 		if (em != null) {
 			// Now we create the ECS status and message panel
@@ -107,14 +111,7 @@ class FireMonitor extends Thread {
 			 *********************************************************************/
 
 			while (!Done) {
-
-				// if the user wants to turn the sprinkler off
-				if (console.getTurnSrinklerOff()) {
-					Sprinkler(false);
-					si.SetLampColorAndMessage("SPKL OFF", 0);
-					console.setSprinklerStatus(false);
-				}
-
+				noSensorMessage++;
 				// Here we get our message queue from the message manager
 
 				try {
@@ -131,42 +128,32 @@ class FireMonitor extends Thread {
 				// We are looking for MessageID = 4.
 				int qlen = eq.GetSize();
 
+				isOnFire = false;
 				for (int i = 0; i < qlen; i++) {
 					Msg = eq.GetMessage();
+					
+					if (!MessageEncryptor.isGranted(Msg)) {
+						mw.WriteMessage("Unknown message detected! Ignored.");
+						continue;
+					}
 
-					if (Msg.GetMessageId() == Constant.MESSAGE_ID_FIREALARM) // Fire alarm
-					{
-						mw.WriteMessage("Fire alarm detected! Please go to the command window for further action.");
-						fi.SetLampColorAndMessage("FIRE ALARM", 3);
-						console.reportAlarm();
+					if (Msg.GetMessageId() == Constant.MESSAGE_ID_SPRINKLER_CONFIRM) {
+						// if confirmation is received, clear pending message.
+						pendingMsg = null;
 
-						int waitTime = 10000; // wait for maximum 10s
-						while (waitTime >= 0) {
-							if (console.getUserAction().equals("1")) {
-								turnOnSprinkler = true;
-								break;
-							} else if (console.getUserAction().equals("2")) {
-								turnOnSprinkler = false;
-								break;
-							}
-
-							try {
-								Thread.sleep(200);
-								waitTime -= 200;
-							} catch (Exception e) {
-								System.out.println("Sleep error:: " + e);
-							}
-						}
-
-						if (waitTime <= 0) {
-							turnOnSprinkler = true; // turn the sprinkler on
-													// automatically
-						}
-
-						if (turnOnSprinkler) {
-							Sprinkler(true);
+						if (Msg.GetMessage().equals("S1")) {
 							console.setSprinklerStatus(true);
 							si.SetLampColorAndMessage("SPKL ON", 1);
+							fi.SetLampColorAndMessage("FIRE OK", 1);
+
+							mw.WriteMessage("Sprinkler is on.");
+						}
+					}
+
+					if (Msg.GetMessageId() == Constant.MESSAGE_ID_FIREALARM) {
+						noSensorMessage = 0;
+						if (Msg.GetMessage().equals("F1")) {
+							isOnFire = true;
 						}
 					} // if
 
@@ -190,15 +177,63 @@ class FireMonitor extends Thread {
 
 						mw.WriteMessage("\n\nSimulation Stopped. \n");
 
-						// Get rid of the indicators. The message panel is left
-						// for the
-						// user to exit so they can see the last message posted.
-
-						// ti.dispose();
-
 					} // if
 
 				} // for
+
+				if (isOnFire) {
+					mw.WriteMessage("Fire alarm detected! Please go to the command window for further action.");
+					fi.SetLampColorAndMessage("FIRE ALARM", 3);
+					console.reportAlarm();
+
+					int waitTime = 10000; // wait for maximum 10s
+					while (waitTime >= 0) {
+						if (console.getUserAction().equals("1")) {
+							turnOnSprinkler = true;
+							break;
+						} else if (console.getUserAction().equals("2")) {
+							turnOnSprinkler = false;
+							break;
+						}
+
+						try {
+							Thread.sleep(200);
+							waitTime -= 200;
+						} catch (Exception e) {
+							System.out.println("Sleep error:: " + e);
+						}
+					}
+
+					if (waitTime <= 0) {
+						turnOnSprinkler = true; // turn the sprinkler on
+												// automatically
+					}
+
+					if (turnOnSprinkler) {
+						Sprinkler(true);
+					}
+				}
+
+				// if the user wants to turn the sprinkler off
+				if (console.getTurnSprinklerOff()) {
+					Sprinkler(false);
+					console.setTurnSprinklerOff(false);
+					console.setSprinklerStatus(false);
+					si.SetLampColorAndMessage("SPKL OFF", 0);
+				}
+
+				if (pendingMsg != null) {
+					try {
+						em.SendMessage(pendingMsg);
+						mw.WriteMessage("Sending message...");
+					} catch (Exception e) {
+						System.out.println("Error sending sprinkler control message::  " + e);
+					} // catch
+				}
+
+				if (noSensorMessage >= 3) {
+					mw.WriteMessage("No sensor detected! Please check the devices.");
+				}
 
 				// This delay slows down the sample rate to Delay milliseconds
 
@@ -283,17 +318,7 @@ class FireMonitor extends Thread {
 			msg = new Message(Constant.MESSAGE_ID_SPRINKLER, "S0");
 		} // if
 
-		// Here we send the message to the message manager.
-
-		try {
-			em.SendMessage(msg);
-
-		} // try
-
-		catch (Exception e) {
-			System.out.println("Error sending sprinkler control message::  " + e);
-
-		} // catch
+		pendingMsg = MessageEncryptor.encryptMsg(msg);
 
 	} // Humidifier
 
