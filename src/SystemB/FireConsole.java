@@ -92,7 +92,7 @@ public class FireConsole {
 				System.out.println("2: Cancel");
 
 				userAction = UserInput.KeyboardReadString();
-				
+
 				System.out.println("You selected " + userAction + ".");
 				isAlarmOn = false;
 			}
@@ -112,11 +112,13 @@ public class FireConsole {
 	public void setSprinklerStatus(boolean on) {
 		this.isSprinklerOn = on;
 	}
-	
-	public boolean getTurnSrinklerOff() {
-		boolean result = this.turnSprinklerOff;
-		this.turnSprinklerOff = false; // revert
-		return result;
+
+	public boolean getTurnSprinklerOff() {
+		return turnSprinklerOff;
+	}
+
+	public void setTurnSprinklerOff(boolean b) {
+		turnSprinklerOff = b;
 	}
 
 	public String getUserAction() {

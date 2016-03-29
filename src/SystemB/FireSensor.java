@@ -4,17 +4,17 @@ import InstrumentationPackage.MessageWindow;
 import MessagePackage.Message;
 import MessagePackage.MessageManagerInterface;
 import MessagePackage.MessageQueue;
-import TermioPackage.Termio;
+import SecurityPackage.MessageEncryptor;
 
 public class FireSensor {
 
 	public static void main(String args[]) {
-		Termio UserInput = new Termio();
 		String MsgMgrIP;
 		Message Msg = null;
 		MessageQueue eq = null;
 		MessageManagerInterface em = null;
 		boolean Done = false; // Loop termination flag
+		boolean isSprinklerOn = false;
 
 		/////////////////////////////////////////////////////////////////////////////////
 		// Get the IP address of the message manager
@@ -31,8 +31,7 @@ public class FireSensor {
 				// that the message manager is on the local machine
 
 				em = new MessageManagerInterface();
-			}
-			catch (Exception e) {
+			} catch (Exception e) {
 				System.out.println("Error instantiating message manager interface: " + e);
 			} // catch
 
@@ -98,19 +97,20 @@ public class FireSensor {
 
 			mw.WriteMessage("Beginning Simulation... ");
 
+			boolean isOnFire = false;
 			while (!Done) {
-				
-				System.out.println("\n\n\n\nSelect an option:");
-				System.out.println("1. Simulate fire alarm");
-//				System.out.println("2. Stop simulating");
-				
-				String cmd = UserInput.KeyboardReadString();
 
-				if (cmd.equalsIgnoreCase("1")) {
+				int rn = (int) (Math.random() * 10 + 1);
+				if (rn < 3 && !isSprinklerOn) { // 30% change to have a fire alarm, unless sprinkler is on
+					isOnFire = true;
+				}
 
+				if (isOnFire) {
 					PostFireAlarm(em);
-
 					mw.WriteMessage("Fire alarm!");
+				} else {
+					PostFireOK(em);
+					mw.WriteMessage("Everything is OK.");
 				}
 
 				// if the message id == 99 then this is a signal that the
@@ -132,6 +132,14 @@ public class FireSensor {
 				int qlen = eq.GetSize();
 				for (int i = 0; i < qlen; i++) {
 					Msg = eq.GetMessage();
+
+					if (Msg.GetMessageId() == Constant.MESSAGE_ID_SPRINKLER_CONFIRM) {
+						if (Msg.GetMessage().equals("S1")) {
+							isOnFire = false;
+							isSprinklerOn = true;
+						}
+					}
+
 					if (Msg.GetMessageId() == 99) {
 						Done = true;
 						try {
@@ -145,6 +153,13 @@ public class FireSensor {
 						mw.WriteMessage("\n\nSimulation Stopped. \n");
 					} // if
 				} // for
+
+				try {
+					Thread.sleep(2500);
+				} // try
+				catch (Exception e) {
+					mw.WriteMessage("Sleep error:: " + e);
+				} // catch
 			} // while
 		} else {
 			System.out.println("Unable to register with the message manager.\n\n");
@@ -152,39 +167,33 @@ public class FireSensor {
 
 	} // main
 
-	/***************************************************************************
-	 * CONCRETE METHOD:: PostHumidity Purpose: This method posts the specified
-	 * relative humidity value to the specified message manager. This method
-	 * assumes an message ID of 2.
-	 *
-	 * Arguments: MessageManagerInterface ei - this is the messagemanger
-	 * interface where the message will be posted.
-	 *
-	 * float humidity - this is the humidity value.
-	 *
-	 * Returns: none
-	 *
-	 * Exceptions: None
-	 *
-	 ***************************************************************************/
-
-	static private void PostFireAlarm(MessageManagerInterface ei) {
+	private static void PostFireOK(MessageManagerInterface ei) {
 		// Here we create the message.
-
-		Message msg = new Message((int) Constant.MESSAGE_ID_FIREALARM, "");
+		Message msg = new Message((int) Constant.MESSAGE_ID_FIREALARM, "F0");
 
 		// Here we send the message to the message manager.
-
 		try {
-			ei.SendMessage(msg);
-
+			ei.SendMessage(MessageEncryptor.encryptMsg(msg));
+//			ei.SendMessage(msg);
 		} // try
-
 		catch (Exception e) {
 			System.out.println("Error Posting Relative Fire Alarm:: " + e);
+		} // catch
+	}
 
+	private static void PostFireAlarm(MessageManagerInterface ei) {
+		// Here we create the message.
+		Message msg = new Message((int) Constant.MESSAGE_ID_FIREALARM, "F1");
+
+		// Here we send the message to the message manager.
+		try {
+			ei.SendMessage(MessageEncryptor.encryptMsg(msg));
+//			ei.SendMessage(msg);
+		} // try
+		catch (Exception e) {
+			System.out.println("Error Posting Relative Fire Alarm:: " + e);
 		} // catch
 
-	} // PostHumidity
+	}
 
 }

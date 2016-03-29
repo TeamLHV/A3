@@ -25,64 +25,74 @@ import MessagePackage.Message;
 
 public class MessageEncryptor {
 	private static final String algorithm = "AES";
-    private static final String secretKey = SecurityConstants.secretKey;
+	private static final String secretKey = SecurityConstants.secretKey;
 
-    private static Key generateKey() throws Exception {
-        byte[] keyValue = secretKey.getBytes("UTF-8");
-        MessageDigest sha = MessageDigest.getInstance("SHA-1");
-        keyValue = sha.digest(keyValue);
-        keyValue = Arrays.copyOf(keyValue, 16);  
-        Key key = new SecretKeySpec(keyValue, algorithm);
-        return key;
-    }
+	private static Key generateKey() throws Exception {
+		byte[] keyValue = secretKey.getBytes("UTF-8");
+		MessageDigest sha = MessageDigest.getInstance("SHA-1");
+		keyValue = sha.digest(keyValue);
+		keyValue = Arrays.copyOf(keyValue, 16);
+		Key key = new SecretKeySpec(keyValue, algorithm);
+		return key;
+	}
 
-    public static String encrypt(String Data) throws Exception {
-            Key key = generateKey();
-            Cipher c = Cipher.getInstance(algorithm);
-            c.init(Cipher.ENCRYPT_MODE, key);
-            byte[] encVal = c.doFinal(Data.getBytes());
-            String encryptedValue = DatatypeConverter.printBase64Binary(encVal);
-            return encryptedValue;
-    }
+	public static Message encryptMsg(Message msg) {
+		try {
+			msg.SetEncryptedToken(encrypt(String.valueOf(msg.GetMessageId())));
+		} catch (Exception e) {
+			System.out.println("Encryption failed.");
+		}
+		return msg;
+	}
 
-    public static String decrypt(String encryptedData) throws Exception {
-        Key key = generateKey();
-        Cipher c = Cipher.getInstance(algorithm);
-        c.init(Cipher.DECRYPT_MODE, key);       
-        byte[] decordedValue = DatatypeConverter.parseBase64Binary(encryptedData);
-        byte[] decValue = c.doFinal(decordedValue);
-        String decryptedValue = new String(decValue);
-        return decryptedValue;
-    }
-    
-    public static Boolean isGranted(Message msg) throws Exception{
-    	String token = decrypt(msg.GetEncryptedToken());
-    	
-    	if (msg.GetMessageId() == Integer.parseInt(token))
-    		return true;
-    	
-    	return false;
-    }
-	
+	public static String encrypt(String Data) throws Exception {
+		Key key = generateKey();
+		Cipher c = Cipher.getInstance(algorithm);
+		c.init(Cipher.ENCRYPT_MODE, key);
+		byte[] encVal = c.doFinal(Data.getBytes());
+		String encryptedValue = DatatypeConverter.printBase64Binary(encVal);
+		return encryptedValue;
+	}
+
+	public static String decrypt(String encryptedData) throws Exception {
+		Key key = generateKey();
+		Cipher c = Cipher.getInstance(algorithm);
+		c.init(Cipher.DECRYPT_MODE, key);
+		byte[] decordedValue = DatatypeConverter.parseBase64Binary(encryptedData);
+		byte[] decValue = c.doFinal(decordedValue);
+		String decryptedValue = new String(decValue);
+		return decryptedValue;
+	}
+
+	public static Boolean isGranted(Message msg) {
+		try {
+			String token = decrypt(msg.GetEncryptedToken());
+
+			if (msg.GetMessageId() == Integer.parseInt(token))
+				return true;
+		} catch (Exception e) {
+			return false;
+		}
+
+		return false;
+	}
+
 	// For testing purpose
-    public static void main(String[] args) {
+	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		Message msg = new Message(2);
 		msg.SetEncryptedToken("5l8l8q6OJMLP8YKSCQy1Tw==");
-		
+
 		try {
-			if (isGranted(msg))
-			{
+			if (isGranted(msg)) {
 				System.out.println("Granted!");
-			}
-			else
-			{
+			} else {
 				System.out.println("Blocked!");
 			}
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			System.out.println("Blocked!");
-			//e.printStackTrace();
+			// e.printStackTrace();
 		}
 	}
 }

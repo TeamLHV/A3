@@ -22,6 +22,7 @@ import InstrumentationPackage.MessageWindow;
 import MessagePackage.Message;
 import MessagePackage.MessageManagerInterface;
 import MessagePackage.MessageQueue;
+import SecurityPackage.MessageEncryptor;
 
 class SprinklerController {
 	public static void main(String args[]) {
@@ -29,7 +30,7 @@ class SprinklerController {
 		Message Msg = null; // Message object
 		MessageQueue eq = null; // Message Queue
 		MessageManagerInterface em = null;
-		int Delay = 2500; // The loop delay (2.5 seconds)
+		int Delay = 1000; // The loop delay (1 seconds)
 		boolean Done = false; // Loop termination flag
 		boolean SprinklerOn = false;
 
@@ -138,25 +139,25 @@ class SprinklerController {
 				for (int i = 0; i < qlen; i++) {
 					Msg = eq.GetMessage();
 
+					if (!MessageEncryptor.isGranted(Msg)) {
+						mw.WriteMessage("Unknown message detected! Ignored.");
+						continue;
+					}
 					if (Msg.GetMessageId() == Constant.MESSAGE_ID_SPRINKLER) {
-						if (Msg.GetMessage().equalsIgnoreCase("S1")) // sprinkler
-																		// on
+						if (Msg.GetMessage().equalsIgnoreCase("S1")) // on
 						{
 							SprinklerOn = true;
 							mw.WriteMessage("Received sprinkler on message");
 
-							// ConfirmMessage(em, "S1");
-
+							ConfirmMessage(em, "S1");
 						} // if
 
-						if (Msg.GetMessage().equalsIgnoreCase("S0")) // humidifier
-																		// off
+						if (Msg.GetMessage().equalsIgnoreCase("S0")) // off
 						{
 							SprinklerOn = false;
 							mw.WriteMessage("Received sprinkler off message");
 
-							// ConfirmMessage(em, "S0");
-
+							ConfirmMessage(em, "S0");
 						} // if
 
 					} // if
@@ -246,12 +247,12 @@ class SprinklerController {
 	static private void ConfirmMessage(MessageManagerInterface ei, String m) {
 		// Here we create the message.
 
-		Message msg = new Message((int) -4, m);
+		Message msg = new Message(Constant.MESSAGE_ID_SPRINKLER_CONFIRM, m);
 
 		// Here we send the message to the message manager.
 
 		try {
-			ei.SendMessage(msg);
+			ei.SendMessage(MessageEncryptor.encryptMsg(msg));
 
 		} // try
 
