@@ -33,6 +33,7 @@ import InstrumentationPackage.MessageWindow;
 import MessagePackage.Message;
 import MessagePackage.MessageManagerInterface;
 import MessagePackage.MessageQueue;
+import SecurityPackage.MessageEncryptor;
 
 class SecurityController
 {
@@ -162,7 +163,10 @@ class SecurityController
 				for ( int i = 0; i < qlen; i++ )
 				{
 					Msg = eq.GetMessage();
-
+					if (!MessageEncryptor.isGranted(Msg)) {
+						mw.WriteMessage("Unknown message detected! Ignored.");
+						continue;
+					}
 					if ( Msg.GetMessageId() == 14 )
 					{
 						if (Msg.GetMessage().equalsIgnoreCase("D1"))
@@ -223,27 +227,36 @@ class SecurityController
 					// Update the lamp status
 
 				} // for
-
-				if (doorSecurityState)
-				{
-					di.SetLampColorAndMessage("D_Alarm", 3);
-				} 
-				if (windowSecurityState)
-				{
-					wi.SetLampColorAndMessage("W_Alarm", 3);
-				} 
-				if (motionSecurityState)
-				{
-					mi.SetLampColorAndMessage("M_Alarm", 3);
+				try{
+					if (doorSecurityState)
+					{
+						di.SetLampColorAndMessage("D_Alarm", 3);
+						Message msg = new Message(-14,"D1_ACK");
+						em.SendMessage(MessageEncryptor.encryptMsg(msg));
+					} 
+					if (windowSecurityState)
+					{
+						wi.SetLampColorAndMessage("W_Alarm", 3);
+						Message msg = new Message(-15,"W1_ACK");
+						em.SendMessage(MessageEncryptor.encryptMsg(msg));
+					} 
+					if (motionSecurityState)
+					{
+						mi.SetLampColorAndMessage("M_Alarm", 3);
+						Message msg = new Message(-16,"M1_ACK");
+						em.SendMessage(MessageEncryptor.encryptMsg(msg));
+					}
+					if(allAlarms){
+						doorSecurityState = false;
+						windowSecurityState = false;
+						motionSecurityState = false;
+						di.SetLampColorAndMessage("DS Idle", 0);
+						wi.SetLampColorAndMessage("WS Idle", 0);
+						mi.SetLampColorAndMessage("MS Idle", 0);
+					}
+				}catch(Exception e){
+					System.out.println("Error while sending message");
 				}
-				if(allAlarms){
-					doorSecurityState = false;
-					windowSecurityState = false;
-					motionSecurityState = false;
-					di.SetLampColorAndMessage("DS Idle", 0);
-					wi.SetLampColorAndMessage("WS Idle", 0);
-					mi.SetLampColorAndMessage("MS Idle", 0);
-				}	
 				try
 				{
 					Thread.sleep( Delay );

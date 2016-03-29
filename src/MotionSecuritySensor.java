@@ -25,6 +25,7 @@ import InstrumentationPackage.MessageWindow;
 import MessagePackage.Message;
 import MessagePackage.MessageManagerInterface;
 import MessagePackage.MessageQueue;
+import SecurityPackage.MessageEncryptor;
 import TermioPackage.Termio;
 
 class MotionSecuritySensor
@@ -172,7 +173,7 @@ class MotionSecuritySensor
 			eq = em.GetMessageQueue();
 			Message msg = new Message( (int) 13, "M1");
 			String message = "Motion Detected..please check";
-			em.SendMessage(msg);
+			em.SendMessage(MessageEncryptor.encryptMsg(msg));
 			mw.WriteMessage(message);
 		} // try
 		catch( Exception e )

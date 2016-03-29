@@ -27,6 +27,7 @@ import InstrumentationPackage.MessageWindow;
 import MessagePackage.Message;
 import MessagePackage.MessageManagerInterface;
 import MessagePackage.MessageQueue;
+import SecurityPackage.MessageEncryptor;
 
 class SecurityMonitor extends Thread
 {
@@ -133,11 +134,24 @@ class SecurityMonitor extends Thread
 			/********************************************************************
 			** Here we start the main simulation loop
 			*********************************************************************/
-
+	    	int doorSensorCount = 0;
+	    	int windowSensorCount = 0;
+	    	int motionSensorCount = 0;
 			while ( !Done )
 			{
 				// Here we get our message queue from the message manager
-
+				doorSensorCount++;
+				windowSensorCount++;
+				motionSensorCount++;
+				if(doorSensorCount > 3){
+					mw.WriteMessage("Door Sensor is not responding!!!");
+				}
+				if(windowSensorCount > 3){
+					mw.WriteMessage("Window Sensor is not responding!!!");				
+				}
+				if(motionSensorCount > 3){
+					mw.WriteMessage("Motion Detection Sensor is not responding!!!");
+				}
 				try
 				{
 					eq = em.GetMessageQueue();
@@ -154,6 +168,10 @@ class SecurityMonitor extends Thread
 				for ( int i = 0; i < qlen; i++ )
 				{
 					Msg = eq.GetMessage();
+					if (!MessageEncryptor.isGranted(Msg)) {
+						mw.WriteMessage("Unknown message detected! Ignored.");
+						continue;
+					}
 					if (securityArmed) {
 						if (Msg.GetMessageId() == 11) // Door reading
 						{
@@ -161,8 +179,9 @@ class SecurityMonitor extends Thread
 								if (Msg.GetMessage().equalsIgnoreCase("D1")) {
 									message = "Door is unsafe..Alert!!!";
 									Message msg = new Message((int) 14, "D1");
-									em.SendMessage(msg);
+									em.SendMessage(MessageEncryptor.encryptMsg(msg));
 									di.SetLampColorAndMessage("DS-ALERT!", 3);
+									doorSensorCount = 0;
 								}
 							} // try
 							catch (Exception e) {
@@ -175,8 +194,9 @@ class SecurityMonitor extends Thread
 								if (Msg.GetMessage().equalsIgnoreCase("W1")) {
 									message = "Window is unsafe..Alert!!!";
 							 		Message msg = new Message((int) 15, "W1");
-									em.SendMessage(msg);
+									em.SendMessage(MessageEncryptor.encryptMsg(msg));
 									wi.SetLampColorAndMessage("WS-ALERT!", 3);
+									windowSensorCount = 0;
 								}
 
 							} // try
@@ -193,8 +213,9 @@ class SecurityMonitor extends Thread
 								if (Msg.GetMessage().equalsIgnoreCase("M1")) {
 									message = "Motion detected: status unsafe..Alert!!!";
 									Message msg = new Message((int) 16, "M1");
-									em.SendMessage(msg);
+									em.SendMessage(MessageEncryptor.encryptMsg(msg));
 									mi.SetLampColorAndMessage("MS-ALERT!", 3);
+									motionSensorCount = 0;
 								}
 
 							} // try
@@ -205,6 +226,51 @@ class SecurityMonitor extends Thread
 							} // catch
 
 						} // if
+						
+						if (Msg.GetMessageId() == -14) // Motion reading
+						{
+							try {
+								if (Msg.GetMessage().equalsIgnoreCase("D1_ACK")) {
+									message = "D1 message received by the monitor";
+								}
+
+							} // try
+							catch (Exception e) {
+								mw.WriteMessage("Error reading motion detection messages: " + e);
+
+							} // catch
+
+						} 
+						if (Msg.GetMessageId() == -15) // Motion reading
+						{
+							try {
+								if (Msg.GetMessage().equalsIgnoreCase("M1_ACK")) {
+									message = "M1 message received by the monitor";
+								}
+
+							} // try
+
+							catch (Exception e) {
+								mw.WriteMessage("Error reading motion detection messages: " + e);
+
+							} // catch
+
+						} 
+						if (Msg.GetMessageId() == -16) // Motion reading
+						{
+							try {
+								if (Msg.GetMessage().equalsIgnoreCase("W1_ACK")) {
+									message = "W1 message received by the monitor";
+								}
+
+							} // try
+
+							catch (Exception e) {
+								mw.WriteMessage("Error reading motion detection messages: " + e);
+
+							} // catch
+
+						} 
 							// If the message ID == 99 then this is a signal that the simulation
 							// is to end. At this point, the loop termination flag is set to
 							// true and this process unregisters from the message manager.
@@ -279,7 +345,7 @@ class SecurityMonitor extends Thread
 		msg = new Message( (int) 99, "XXX" );
 		try
 		{
-			em.SendMessage( msg );
+			em.SendMessage( MessageEncryptor.encryptMsg(msg));
 		} // try
 		catch (Exception e)
 		{

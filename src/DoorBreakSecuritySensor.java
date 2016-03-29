@@ -25,6 +25,7 @@ import InstrumentationPackage.MessageWindow;
 import MessagePackage.Message;
 import MessagePackage.MessageManagerInterface;
 import MessagePackage.MessageQueue;
+import SecurityPackage.MessageEncryptor;
 import TermioPackage.Termio;
 
 class DoorBreakSecuritySensor
@@ -170,7 +171,7 @@ class DoorBreakSecuritySensor
 			eq = em.GetMessageQueue();
 			Message msg = new Message( (int) 11, "D1");
 			String message = "Door unsafe..please check";
-			em.SendMessage(msg);
+			em.SendMessage(MessageEncryptor.encryptMsg(msg));
 			mw.WriteMessage(message);
 		} // try
 		catch( Exception e )

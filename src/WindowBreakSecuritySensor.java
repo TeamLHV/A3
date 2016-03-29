@@ -25,6 +25,7 @@ import InstrumentationPackage.MessageWindow;
 import MessagePackage.Message;
 import MessagePackage.MessageManagerInterface;
 import MessagePackage.MessageQueue;
+import SecurityPackage.MessageEncryptor;
 import TermioPackage.Termio;
 
 class WindowBreakSecuritySensor
@@ -170,7 +171,7 @@ class WindowBreakSecuritySensor
 			eq = em.GetMessageQueue();
 			Message msg = new Message( (int) 12, "W1");
 			String message = "Window broken..please check";
-			em.SendMessage(msg);
+			em.SendMessage(MessageEncryptor.encryptMsg(msg));
 			mw.WriteMessage(message);
 		} // try
 		catch( Exception e )
