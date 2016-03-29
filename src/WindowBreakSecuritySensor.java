@@ -25,17 +25,21 @@ import InstrumentationPackage.MessageWindow;
 import MessagePackage.Message;
 import MessagePackage.MessageManagerInterface;
 import MessagePackage.MessageQueue;
+import TermioPackage.Termio;
 
 class WindowBreakSecuritySensor
 {
+	
+	static boolean Done = false;			// Loop termination flag
+	
 	public static void main(String args[])
 	{
+		Termio UserInput = new Termio();	// Termio IO Object
+		String Option = null;				// Menu choice from user
+		boolean Error = false;				// Error flag
 		String MsgMgrIP;				// Message Manager IP address
-		Message Msg = null;				// Message object
 		MessageQueue eq = null;			// Message Queue
 		MessageManagerInterface em = null;// Interface object to the message manager
-		int	Delay = 1000;				// The loop delay (2.5 seconds)
-		boolean Done = false;			// Loop termination flag
 
 		/////////////////////////////////////////////////////////////////////////////////
 		// Get the IP address of the message manager
@@ -101,61 +105,95 @@ class WindowBreakSecuritySensor
 			*********************************************************************/
 
 			mw.WriteMessage("Beginning Simulation... ");
-
-			int count = 0;
-			while ( !Done )
+			
+			while (!Done)
 			{
-				try
-				{
-					count++;
-					if(count%5==0){
-						Message msg = new Message( (int) 12, "W0");
-						String message = "Window safe";
-						msg = new Message( (int) 12, "W1");
-						message = "Window unsafe..please check";
-						count = 0;
-						em.SendMessage(msg);
-						eq = em.GetMessageQueue();
-						mw.WriteMessage(message);
-					}
-				} // try
-				catch( Exception e )
-				{
-					mw.WriteMessage("Error getting message queue::" + e );
+				System.out.println( "\n\n\n\n" );
+				System.out.println( "Window Break Attack Manual Simulation Command Console: \n" );
 
-				} // catch
-				int qlen = eq.GetSize();
-				for ( int i = 0; i < qlen; i++ )
+				if (args.length != 0)
+					System.out.println( "Using message manger at: " + args[0] + "\n" );
+				else
+					System.out.println( "Using local message manger \n" );
+
+				System.out.println( "Select an Option: \n" );
+				System.out.println( "1: Stimulate Window Break Attack" );
+				System.out.println( "X: Stop Stimulation\n" );
+				System.out.print( "\n>>>> " );
+				Option = UserInput.KeyboardReadString();
+
+				//////////// option 1 ////////////
+
+				if ( Option.equals( "1" ) )
 				{
-					Msg = eq.GetMessage();
-					if ( Msg.GetMessageId() == 99 )
+					// Here we get the temperature ranges
+
+					Error = true;
+
+					while (Error)
 					{
-						Done = true;
-						try
+						// Here we get the low temperature range
+
+						while (Error)
 						{
-							em.UnRegister();
-				    	} // try
-				    	catch (Exception e)
-				    	{
-							mw.WriteMessage("Error unregistering: " + e);
-				    	} // catch
-				    	mw.WriteMessage("\n\nSimulation Stopped. \n");
-					} // if
-				} // for
-				try
-				{
-					Thread.sleep( Delay );
+							if (UserInput.IsNumber(Option))
+							{
+								Error = false;
+								sendAttackMessage(eq, em, mw);
 
-				} // try
-				catch( Exception e )
-				{
-					mw.WriteMessage("Sleep error:: " + e );
+							} else{
 
-				} // catch
+								System.out.println( "Not a number, please try again..." );
 
-			} // while
-		} else {
-			System.out.println("Unable to register with the message manager.\n\n" );
-		} // if
+							} // if
+						} // while
+					} // while
+				} // if
+				else  if("X".equalsIgnoreCase(Option)){
+					try {
+						Done = true;
+						em.UnRegister();
+						mw.WriteMessage("\n\nSimulation Stopped");
+						System.out.println("Simulation Stopped");
+					} catch (Exception e) {
+						System.out.println("Error during unregistering");
+					}
+				}
+			} 
+		}
 	} // main
+
+	private static void sendAttackMessage(MessageQueue eq, MessageManagerInterface em, MessageWindow mw) {
+		Message Msg;
+		try
+		{
+			eq = em.GetMessageQueue();
+			Message msg = new Message( (int) 12, "W1");
+			String message = "Window broken..please check";
+			em.SendMessage(msg);
+			mw.WriteMessage(message);
+		} // try
+		catch( Exception e )
+		{
+			mw.WriteMessage("Error getting message queue::" + e );
+
+		} // catch
+		int qlen = eq.GetSize();
+		for ( int i = 0; i < qlen; i++ )
+		{
+			Msg = eq.GetMessage();
+			if ( Msg.GetMessageId() == 99 )
+			{
+				try {
+					Done = true;
+					em.UnRegister();
+					mw.WriteMessage("\n\nSimulation Stopped");
+					System.out.println("Simulation Stopped");
+				} catch (Exception e) {
+					System.out.println("Error during unregistering");
+				}
+				
+			} // if
+		} // for
+	}
 } // TemperatureSensor

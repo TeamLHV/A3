@@ -28,9 +28,11 @@
 *	static private void ConfirmMessage(MessageManagerInterface ei, String m )
 *
 ******************************************************************************************************************/
-import InstrumentationPackage.*;
-import MessagePackage.*;
-import java.util.*;
+import InstrumentationPackage.Indicator;
+import InstrumentationPackage.MessageWindow;
+import MessagePackage.Message;
+import MessagePackage.MessageManagerInterface;
+import MessagePackage.MessageQueue;
 
 class SecurityController
 {
@@ -39,11 +41,11 @@ class SecurityController
 		String MsgMgrIP;					// Message Manager IP address
 		Message Msg = null;					// Message object
 		MessageQueue eq = null;				// Message Queue
-		int MsgId = 0;						// User specified message ID
 		MessageManagerInterface em = null;	// Interface object to the message manager
 		boolean doorSecurityState = false;		// Heater state: false == off, true == on
 		boolean windowSecurityState = false;
 		boolean motionSecurityState = false;
+		boolean allAlarms = false;
 		int	Delay = 1000;					// The loop delay (1 seconds)
 		boolean Done = false;				// Loop termination flag
 
@@ -112,13 +114,13 @@ class SecurityController
 			float WinPosY = 0.3f; 	//This is the Y position of the message window in terms
 								 	//of a percentage of the screen height
 
-			MessageWindow mw = new MessageWindow("Temperature Controller Status Console", WinPosX, WinPosY);
+			MessageWindow mw = new MessageWindow("Security Controller Status Console", WinPosX, WinPosY);
 
 			// Put the status indicators under the panel...
 
-			Indicator di = new Indicator ("Door Secuirty ON", mw.GetX(), mw.GetY()+mw.Height());
-			Indicator wi = new Indicator ("Window Security ON", mw.GetX()+(di.Width()*2), mw.GetY()+mw.Height());
-			Indicator mi = new Indicator ("Motion detection ON", mw.GetX()+(wi.Width()*2), mw.GetY()+mw.Height());
+			Indicator di = new Indicator ("D_Alarm", mw.GetX(), mw.GetY()+mw.Height());
+			Indicator wi = new Indicator ("W_Alarm", mw.GetX()+(di.Width()*2), mw.GetY()+mw.Height());
+			Indicator mi = new Indicator ("M_Alarm", mw.GetX()+(wi.Width()*2), mw.GetY()+mw.Height());
 
 			mw.WriteMessage("Registered with the message manager." );
 
@@ -154,13 +156,6 @@ class SecurityController
 
 				} // catch
 
-				// If there are messages in the queue, we read through them.
-				// We are looking for MessageIDs = 5, this is a request to turn the
-				// heater or chiller on. Note that we get all the messages
-				// at once... there is a 2.5 second delay between samples,.. so
-				// the assumption is that there should only be a message at most.
-				// If there are more, it is the last message that will effect the
-				// output of the temperature as it would in reality.
 
 				int qlen = eq.GetSize();
 
@@ -170,123 +165,85 @@ class SecurityController
 
 					if ( Msg.GetMessageId() == 14 )
 					{
-						if (Msg.GetMessage().equalsIgnoreCase("DB0")) // heater on
+						if (Msg.GetMessage().equalsIgnoreCase("D1"))
 						{
 							doorSecurityState = true;
-							mw.WriteMessage("Door Security safe message" );
-						} // if
-
-						if (Msg.GetMessage().equalsIgnoreCase("DB1")) // heater on
-						{
-							doorSecurityState = false;
+							allAlarms = false;
 							mw.WriteMessage("Door Security Alarm message!!!" );
 						} // if
 					}
 					
 					if ( Msg.GetMessageId() == 15 )
 					{
-						if (Msg.GetMessage().equalsIgnoreCase("WB0")) // heater on
+						if (Msg.GetMessage().equalsIgnoreCase("W1"))
 						{
 							windowSecurityState = true;
-							mw.WriteMessage("Window Security safe message" );
-						} // if
-
-						if (Msg.GetMessage().equalsIgnoreCase("WB1")) // heater off
-						{
-							windowSecurityState = false;
+							allAlarms = false;
 							mw.WriteMessage("Window Security Alarm message!!!" );
 
 						} // if
 					}
 					if ( Msg.GetMessageId() == 16 )
 					{
-						if (Msg.GetMessage().equalsIgnoreCase("MD0")) // heater on
+						if (Msg.GetMessage().equalsIgnoreCase("M1"))
 						{
 							motionSecurityState = true;
-							mw.WriteMessage("Motion Security safe message" );
-
-						} // if
-						if (Msg.GetMessage().equalsIgnoreCase("MD1")) // heater off
-						{
-							motionSecurityState = false;
+							allAlarms = false;
 							mw.WriteMessage("Motion Security Alarm message!!!" );
 
 						} // if
 					}
-					// If the message ID == 99 then this is a signal that the simulation
-					// is to end. At this point, the loop termination flag is set to
-					// true and this process unregisters from the message manager.
-
+					if ( Msg.GetMessageId() == 17 )
+					{
+						if (Msg.GetMessage().equalsIgnoreCase("AA"))
+						{
+							allAlarms = true;
+							mw.WriteMessage("All alarms idle..." );
+	
+						} // if
+					}
 					if ( Msg.GetMessageId() == 99 )
 					{
 						Done = true;
-
 						try
 						{
 							em.UnRegister();
-
 				    	} // try
-
 				    	catch (Exception e)
 				    	{
 							mw.WriteMessage("Error unregistering: " + e);
-
 				    	} // catch
-
 				    	mw.WriteMessage( "\n\nSimulation Stopped. \n");
-
-						// Get rid of the indicators. The message panel is left for the
-						// user to exit so they can see the last message posted.
 
 						di.dispose();
 						wi.dispose();
 						mi.dispose();
 
 					} // if
+					// Update the lamp status
 
 				} // for
 
-				// Update the lamp status
-
 				if (doorSecurityState)
 				{
-					// Set to green, heater is on
-
-					di.SetLampColorAndMessage("Door Security Armed", 1);
-
-				} else {
-
-					// Set to black, heater is off
-					di.SetLampColorAndMessage("Door Security Disarmed", 0);
-
-				} // if
-
+					di.SetLampColorAndMessage("D_Alarm", 3);
+				} 
 				if (windowSecurityState)
 				{
-					// Set to green, chiller is on
-
-					wi.SetLampColorAndMessage("Window Security Armed", 1);
-
-				} else {
-
-					// Set to black, chiller is off
-
-					wi.SetLampColorAndMessage("Window Security Disarmed", 0);
-
-				} // if
+					wi.SetLampColorAndMessage("W_Alarm", 3);
+				} 
 				if (motionSecurityState)
 				{
-					// Set to green, chiller is on
-
-					mi.SetLampColorAndMessage("Motion detection Security Armed", 1);
-
-				} else {
-
-					// Set to black, chiller is off
-
-					mi.SetLampColorAndMessage("Motion detection Security Disarmed", 0);
-
-				} // if
+					mi.SetLampColorAndMessage("M_Alarm", 3);
+				}
+				if(allAlarms){
+					doorSecurityState = false;
+					windowSecurityState = false;
+					motionSecurityState = false;
+					di.SetLampColorAndMessage("DS Idle", 0);
+					wi.SetLampColorAndMessage("WS Idle", 0);
+					mi.SetLampColorAndMessage("MS Idle", 0);
+				}	
 				try
 				{
 					Thread.sleep( Delay );
@@ -298,54 +255,8 @@ class SecurityController
 					System.out.println( "Sleep error:: " + e );
 
 				} // catch
-
 			} // while
-
-		} else {
-
-			System.out.println("Unable to register with the message manager.\n\n" );
-
-		} // if
-
-	} // main
-
-	/***************************************************************************
-	* CONCRETE METHOD:: ConfirmMessage
-	* Purpose: This method posts the specified message to the specified message
-	* manager. This method assumes an message ID of -5 which indicates a confirma-
-	* tion of a command.
-	*
-	* Arguments: MessageManagerInterface ei - this is the messagemanger interface
-	*			 where the message will be posted.
-	*
-	*			 string m - this is the received command.
-	*
-	* Returns: none
-	*
-	* Exceptions: None
-	*
-	***************************************************************************/
-
-	static private void ConfirmMessage(MessageManagerInterface ei, String m )
-	{
-		// Here we create the message.
-
-		Message msg = new Message( (int) -5, m );
-
-		// Here we send the message to the message manager.
-
-		try
-		{
-			ei.SendMessage( msg );
-
-		} // try
-
-		catch (Exception e)
-		{
-			System.out.println("Error Confirming Message:: " + e);
-
-		} // catch
-
-	} // PostMessage
+		}
+	}// main
 
 } // TemperatureController

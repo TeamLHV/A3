@@ -1,5 +1,5 @@
 /******************************************************************************************************************
-* File:ECSMonitor.java
+* File:SecurityMonitor.java
 * Course: 17655
 * Project: Assignment A3
 * Copyright: Copyright (c) 2009 Carnegie Mellon University
@@ -9,7 +9,7 @@
 * Description:
 *
 * This class monitors the environmental control systems that control museum temperature and humidity. In addition to
-* monitoring the temperature and humidity, the ECSMonitor also allows a user to set the humidity and temperature
+* monitoring the temperature and humidity, the SecurityMonitor also allows a user to set the humidity and temperature
 * ranges to be maintained. If temperatures exceed those limits over/under alarm indicators are triggered.
 *
 * Parameters: IP address of the message manager (on command line). If blank, it is assumed that the message manager is
@@ -38,6 +38,7 @@ class SecurityMonitor extends Thread
 	Indicator wi;								// Window Security indicator
 	Indicator mi;								// Motion Security indicator
 	private boolean securityArmed = true;
+	String message = "Monitors Idle";
 
 	public boolean isSecurityArmed() {
 		return securityArmed;
@@ -45,6 +46,23 @@ class SecurityMonitor extends Thread
 
 	public void setSecurityArmed(boolean securityArmed) {
 		this.securityArmed = securityArmed;
+		if(securityArmed){
+			di.SetLampColorAndMessage("DS On", 1);
+			wi.SetLampColorAndMessage("WS On", 1);
+			mi.SetLampColorAndMessage("MS On", 1);
+			message = "Monitors Idle";
+		}else{
+			di.SetLampColorAndMessage("DS Off", 0);
+			wi.SetLampColorAndMessage("WS Off", 0);
+			mi.SetLampColorAndMessage("MS Off", 0);
+			message = "Monitors Off";
+			Message msg = new Message((int) 17, "AA");
+			try {
+				em.SendMessage(msg);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	public SecurityMonitor()
@@ -55,7 +73,7 @@ class SecurityMonitor extends Thread
 		}
 		catch (Exception e)
 		{
-			System.out.println("ECSMonitor::Error instantiating message manager interface: " + e);
+			System.out.println("SecurityMonitor::Error instantiating message manager interface: " + e);
 			Registered = false;
 		} // catch
 
@@ -70,7 +88,7 @@ class SecurityMonitor extends Thread
 		}
 		catch (Exception e)
 		{
-			System.out.println("ECSMonitor::Error instantiating message manager interface: " + e);
+			System.out.println("SecurityMonitor::Error instantiating message manager interface: " + e);
 			Registered = false;
 
 		} // catch
@@ -81,22 +99,21 @@ class SecurityMonitor extends Thread
 	{
 		Message Msg = null;				// Message object
 		MessageQueue eq = null;			// Message Queue
-		int MsgId = 0;					// User specified message ID
-		int	Delay = 1000;				// The loop delay (1 second)
+		int	Delay = 2000;				// The loop delay (1 second)
 		boolean Done = false;			// Loop termination flag
 
 		if (em != null)
 		{
-			// Now we create the ECS status and message panel
+			// Now we create the Security status and message panel
 			// Note that we set up two indicators that are initially yellow. This is
 			// because we do not know if the temperature/humidity is high/low.
 			// This panel is placed in the upper left hand corner and the status
 			// indicators are placed directly to the right, one on top of the other
 
 			mw = new MessageWindow("Security Monitoring Console", 0, 0);
-			di = new Indicator ("Door Monitoring System", mw.GetX()+ mw.Width(), 0);
-			wi = new Indicator ("Window Monitoring System", mw.GetX()+ mw.Width(), (int)(mw.Height()/2), 2 );
-			mi = new Indicator ("Motion Monitoring System", mw.GetX()+ mw.Width(), (int)(mw.Height()/2), 2 );
+			di = new Indicator ("DS On", mw.GetX()+ mw.Width(), 0,1);
+			wi = new Indicator ("WS On", mw.GetX()+ mw.Width(), (int)(mw.Height()/2), 1 );
+			mi = new Indicator ("MS On", mw.GetX()+ mw.Width(), (int)(mw.Height()/2), 1 );
 
 			mw.WriteMessage( "Registered with the message manager." );
 
@@ -133,17 +150,7 @@ class SecurityMonitor extends Thread
 
 				} // catch
 
-				// If there are messages in the queue, we read through them.
-				// We are looking for MessageIDs = 1 or 2. Message IDs of 1 are temperature
-				// readings from the temperature sensor; message IDs of 2 are humidity sensor
-				// readings. Note that we get all the messages at once... there is a 1
-				// second delay between samples,.. so the assumption is that there should
-				// only be a message at most. If there are more, it is the last message
-				// that will effect the status of the temperature and humidity controllers
-				// as it would in reality.
-
 				int qlen = eq.GetSize();
-				String message = "";
 				for ( int i = 0; i < qlen; i++ )
 				{
 					Msg = eq.GetMessage();
@@ -151,14 +158,11 @@ class SecurityMonitor extends Thread
 						if (Msg.GetMessageId() == 11) // Door reading
 						{
 							try {
-								if (Msg.GetMessage().equalsIgnoreCase("D0")) {
-									message = "Door is safe";
-									Message msg = new Message((int) 14, "D0");
-									em.SendMessage(msg);
-								} else if (Msg.GetMessage().equalsIgnoreCase("D1")) {
+								if (Msg.GetMessage().equalsIgnoreCase("D1")) {
 									message = "Door is unsafe..Alert!!!";
 									Message msg = new Message((int) 14, "D1");
 									em.SendMessage(msg);
+									di.SetLampColorAndMessage("DS-ALERT!", 3);
 								}
 							} // try
 							catch (Exception e) {
@@ -168,14 +172,11 @@ class SecurityMonitor extends Thread
 						if (Msg.GetMessageId() == 12) // Window reading
 						{
 							try {
-								if (Msg.GetMessage().equalsIgnoreCase("W0")) {
-									message = "Window is safe";
-									Message msg = new Message((int) 15, "W0");
-									em.SendMessage(msg);
-								} else if (Msg.GetMessage().equalsIgnoreCase("W1")) {
+								if (Msg.GetMessage().equalsIgnoreCase("W1")) {
 									message = "Window is unsafe..Alert!!!";
-									Message msg = new Message((int) 15, "W1");
+							 		Message msg = new Message((int) 15, "W1");
 									em.SendMessage(msg);
+									wi.SetLampColorAndMessage("WS-ALERT!", 3);
 								}
 
 							} // try
@@ -189,14 +190,11 @@ class SecurityMonitor extends Thread
 						if (Msg.GetMessageId() == 13) // Motion reading
 						{
 							try {
-								if (Msg.GetMessage().equalsIgnoreCase("M0")) {
-									message = "No motion detected: status safe";
-									Message msg = new Message((int) 16, "M0");
-									em.SendMessage(msg);
-								} else if (Msg.GetMessage().equalsIgnoreCase("M1")) {
+								if (Msg.GetMessage().equalsIgnoreCase("M1")) {
 									message = "Motion detected: status unsafe..Alert!!!";
 									Message msg = new Message((int) 16, "M1");
 									em.SendMessage(msg);
+									mi.SetLampColorAndMessage("MS-ALERT!", 3);
 								}
 
 							} // try
@@ -266,18 +264,6 @@ class SecurityMonitor extends Thread
 
 	} // main
 
-	/***************************************************************************
-	* CONCRETE METHOD:: IsRegistered
-	* Purpose: This method returns the registered status
-	*
-	* Arguments: none
-	*
-	* Returns: boolean true if registered, false if not registered
-	*
-	* Exceptions: None
-	*
-	***************************************************************************/
-
 	public boolean IsRegistered()
 	{
 		return( Registered );
@@ -289,27 +275,15 @@ class SecurityMonitor extends Thread
 	public void Halt()
 	{
 		mw.WriteMessage( "***HALT MESSAGE RECEIVED - SHUTTING DOWN SYSTEM***" );
-
-		// Here we create the stop message.
-
 		Message msg;
-
 		msg = new Message( (int) 99, "XXX" );
-
-		// Here we send the message to the message manager.
-
 		try
 		{
 			em.SendMessage( msg );
-
 		} // try
-
 		catch (Exception e)
 		{
 			System.out.println("Error sending halt message:: " + e);
-
 		} // catch
-
 	} // Halt
-
 } // SecurityMonitor
