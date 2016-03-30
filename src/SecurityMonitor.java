@@ -138,12 +138,18 @@ class SecurityMonitor extends Thread
 	    	int doorSensorCount = 0;
 	    	int windowSensorCount = 0;
 	    	int motionSensorCount = 0;
+	    	int doorSensorAckCount = 0;
+	    	int windowSensorAckCount = 0;
+	    	int motionSensorAckCount = 0;
 			while ( !Done )
 			{
 				// Here we get our message queue from the message manager
 				doorSensorCount++;
 				windowSensorCount++;
 				motionSensorCount++;
+				doorSensorAckCount++;
+				windowSensorAckCount++;
+				motionSensorAckCount++;
 				if(doorSensorCount > 3){
 					mw.WriteMessage("Door Sensor is not responding!!!");
 				}
@@ -152,6 +158,37 @@ class SecurityMonitor extends Thread
 				}
 				if(motionSensorCount > 3){
 					mw.WriteMessage("Motion Detection Sensor is not responding!!!");
+				}
+				try{
+					if(doorSensorAckCount > 0 && doorSensorAckCount <=3){
+						mw.WriteMessage("Door Sensor ACK not received!!!");
+						mw.WriteMessage("Retry number " + doorSensorAckCount);
+						Message msg = new Message((int) 14, "D1");
+						em.SendMessage(MessageEncryptor.encryptMsg(msg));
+					}
+					if(windowSensorAckCount > 0 && windowSensorAckCount <=3){
+						mw.WriteMessage("Window Sensor ACK not received!!!");
+						mw.WriteMessage("Retry number " + windowSensorAckCount);
+						Message msg = new Message((int) 15, "W1");
+						em.SendMessage(MessageEncryptor.encryptMsg(msg));
+					}
+					if(motionSensorAckCount > 0 && motionSensorAckCount <=3){
+						mw.WriteMessage("Motion Detection Sensor ACK not received!!!");
+						mw.WriteMessage("Retry number " + motionSensorAckCount);
+						Message msg = new Message((int) 16, "M1");
+						em.SendMessage(MessageEncryptor.encryptMsg(msg));
+					}
+					if(doorSensorAckCount > 3){
+						mw.WriteMessage("Door Controller is not responding. Please check!!!");
+					}
+					if(windowSensorAckCount > 3){
+						mw.WriteMessage("Window Controller is not responding. Please check!!!");				
+					}
+					if(motionSensorAckCount > 3){
+						mw.WriteMessage("Motion Detection Controller is not responding. Please check!!!");
+					}
+				}catch(Exception e){
+					System.out.println("Error while sending message");
 				}
 				try
 				{
@@ -232,7 +269,8 @@ class SecurityMonitor extends Thread
 						{
 							try {
 								if (Msg.GetMessage().equalsIgnoreCase("D1_ACK")) {
-									message = "D1 message received by the monitor";
+									message = "D1 Ack message received from the controller";
+									doorSensorAckCount = 0;
 								}
 
 							} // try
@@ -246,7 +284,8 @@ class SecurityMonitor extends Thread
 						{
 							try {
 								if (Msg.GetMessage().equalsIgnoreCase("M1_ACK")) {
-									message = "M1 message received by the monitor";
+									message = "M1 Ack message received from the controller";
+									motionSensorAckCount = 0;
 								}
 
 							} // try
@@ -261,7 +300,8 @@ class SecurityMonitor extends Thread
 						{
 							try {
 								if (Msg.GetMessage().equalsIgnoreCase("W1_ACK")) {
-									message = "W1 message received by the monitor";
+									message = "W1 Ack message received from the controller";
+									windowSensorAckCount = 0;
 								}
 
 							} // try
@@ -276,7 +316,6 @@ class SecurityMonitor extends Thread
 							// is to end. At this point, the loop termination flag is set to
 							// true and this process unregisters from the message manager.
 					}
-					
 					if (Msg.GetMessageId() == 66)
 					{
 						//mw.WriteMessage("Received ping message" );
@@ -286,7 +325,6 @@ class SecurityMonitor extends Thread
 						AckMessage( em, senderDesc );
 
 					} // try
-					
 					if ( Msg.GetMessageId() == 99 )
 					{
 						Done = true;
@@ -387,5 +425,4 @@ class SecurityMonitor extends Thread
 		} // catch
 
 	} // AckMessage
-	
 } // SecurityMonitor
