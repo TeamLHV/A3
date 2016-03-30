@@ -77,6 +77,7 @@ class FireMonitor extends Thread {
 		Message Msg = null; // Message object
 		MessageQueue eq = null; // Message Queue
 		int Delay = 1000; // The loop delay (1 second)
+		int retryCount = 0;
 		boolean Done = false; // Loop termination flag
 		boolean turnOnSprinkler = false;
 		boolean isOnFire = false;
@@ -132,7 +133,7 @@ class FireMonitor extends Thread {
 				isOnFire = false;
 				for (int i = 0; i < qlen; i++) {
 					Msg = eq.GetMessage();
-					
+
 					if (!MessageEncryptor.isGranted(Msg)) {
 						mw.WriteMessage("Unknown message detected! Ignored.");
 						continue;
@@ -141,6 +142,7 @@ class FireMonitor extends Thread {
 					if (Msg.GetMessageId() == Constant.MESSAGE_ID_SPRINKLER_CONFIRM) {
 						// if confirmation is received, clear pending message.
 						pendingMsg = null;
+						retryCount = 0;
 
 						if (Msg.GetMessage().equals("S1")) {
 							console.setSprinklerStatus(true);
@@ -222,24 +224,32 @@ class FireMonitor extends Thread {
 
 					if (turnOnSprinkler) {
 						Sprinkler(true);
+						retryCount = 1;
+						turnOnSprinkler = false;
 					}
 				}
 
 				// if the user wants to turn the sprinkler off
 				if (console.getTurnSprinklerOff()) {
 					Sprinkler(false);
+					retryCount = 1;
 					console.setTurnSprinklerOff(false);
 					console.setSprinklerStatus(false);
 					si.SetLampColorAndMessage("SPKL OFF", 0);
 				}
 
-				if (pendingMsg != null) {
-					try {
-						em.SendMessage(pendingMsg);
-						mw.WriteMessage("Sending message...");
-					} catch (Exception e) {
-						System.out.println("Error sending sprinkler control message::  " + e);
-					} // catch
+				if (retryCount >= 3) {
+					mw.WriteMessage("Failed to deliver the message! The controller is probably broken.");
+				} else {
+					if (pendingMsg != null) {
+						try {
+							em.SendMessage(pendingMsg);
+//							mw.WriteMessage("[" + retryCount + "] Sending message...");
+							retryCount++;
+						} catch (Exception e) {
+							System.out.println("Error sending sprinkler control message::  " + e);
+						} // catch
+					}
 				}
 
 				if (noSensorMessage >= 3) {
