@@ -249,13 +249,13 @@ class SecurityController
 					if (windowSecurityState)
 					{
 						wi.SetLampColorAndMessage("W_Alarm", 3);
-						Message msg = new Message(-15,"W1_ACK");
+						Message msg = new Message(-16,"W1_ACK");
 						em.SendMessage(MessageEncryptor.encryptMsg(msg));
 					} 
 					if (motionSecurityState)
 					{
 						mi.SetLampColorAndMessage("M_Alarm", 3);
-						Message msg = new Message(-16,"M1_ACK");
+						Message msg = new Message(-15,"M1_ACK");
 						em.SendMessage(MessageEncryptor.encryptMsg(msg));
 					}
 					if(allAlarms){

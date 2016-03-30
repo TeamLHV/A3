@@ -41,6 +41,12 @@ class SecurityMonitor extends Thread
 	private boolean securityArmed = true;
 	String message = "Monitors Idle";
 	String senderDesc = "SecurityMonitor";
+	int doorSensorAckCount = 0;
+	int windowSensorAckCount = 0;
+	int motionSensorAckCount = 0;
+	boolean doorMessageSent = false;
+	boolean windowMessageSent = false;
+	boolean motionMessageSent = false;
 
 	public boolean isSecurityArmed() {
 		return securityArmed;
@@ -58,9 +64,15 @@ class SecurityMonitor extends Thread
 			wi.SetLampColorAndMessage("WS Off", 0);
 			mi.SetLampColorAndMessage("MS Off", 0);
 			message = "Monitors Off";
+			doorSensorAckCount = 0;
+	    	windowSensorAckCount = 0;
+	    	motionSensorAckCount = 0;
+	    	doorMessageSent = false;
+	    	windowMessageSent = false;
+	    	motionMessageSent = false;
 			Message msg = new Message((int) 17, "AA");
 			try {
-				em.SendMessage(msg);
+				em.SendMessage(MessageEncryptor.encryptMsg(msg));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -135,57 +147,46 @@ class SecurityMonitor extends Thread
 			/********************************************************************
 			** Here we start the main simulation loop
 			*********************************************************************/
-	    	int doorSensorCount = 0;
-	    	int windowSensorCount = 0;
-	    	int motionSensorCount = 0;
-	    	int doorSensorAckCount = 0;
-	    	int windowSensorAckCount = 0;
-	    	int motionSensorAckCount = 0;
+	    	
 			while ( !Done )
 			{
 				// Here we get our message queue from the message manager
-				doorSensorCount++;
-				windowSensorCount++;
-				motionSensorCount++;
-				doorSensorAckCount++;
-				windowSensorAckCount++;
-				motionSensorAckCount++;
-				if(doorSensorCount > 3){
-					mw.WriteMessage("Door Sensor is not responding!!!");
-				}
-				if(windowSensorCount > 3){
-					mw.WriteMessage("Window Sensor is not responding!!!");				
-				}
-				if(motionSensorCount > 3){
-					mw.WriteMessage("Motion Detection Sensor is not responding!!!");
-				}
 				try{
-					if(doorSensorAckCount > 0 && doorSensorAckCount <=3){
+					if(doorMessageSent && doorSensorAckCount > 0 && doorSensorAckCount <=3){
 						mw.WriteMessage("Door Sensor ACK not received!!!");
 						mw.WriteMessage("Retry number " + doorSensorAckCount);
 						Message msg = new Message((int) 14, "D1");
 						em.SendMessage(MessageEncryptor.encryptMsg(msg));
 					}
-					if(windowSensorAckCount > 0 && windowSensorAckCount <=3){
+					if(windowMessageSent && windowSensorAckCount > 0 && windowSensorAckCount <=3){
 						mw.WriteMessage("Window Sensor ACK not received!!!");
 						mw.WriteMessage("Retry number " + windowSensorAckCount);
 						Message msg = new Message((int) 15, "W1");
 						em.SendMessage(MessageEncryptor.encryptMsg(msg));
 					}
-					if(motionSensorAckCount > 0 && motionSensorAckCount <=3){
+					if(motionMessageSent && motionSensorAckCount > 0 && motionSensorAckCount <=3){
 						mw.WriteMessage("Motion Detection Sensor ACK not received!!!");
 						mw.WriteMessage("Retry number " + motionSensorAckCount);
 						Message msg = new Message((int) 16, "M1");
 						em.SendMessage(MessageEncryptor.encryptMsg(msg));
 					}
-					if(doorSensorAckCount > 3){
+					if(doorMessageSent && doorSensorAckCount > 3){
 						mw.WriteMessage("Door Controller is not responding. Please check!!!");
 					}
-					if(windowSensorAckCount > 3){
+					if(windowMessageSent && windowSensorAckCount > 3){
 						mw.WriteMessage("Window Controller is not responding. Please check!!!");				
 					}
-					if(motionSensorAckCount > 3){
+					if(motionMessageSent && motionSensorAckCount > 3){
 						mw.WriteMessage("Motion Detection Controller is not responding. Please check!!!");
+					}
+					if(doorMessageSent){
+						doorSensorAckCount++;
+					}
+					if(windowMessageSent){
+						windowSensorAckCount++;	
+					}
+					if(motionMessageSent){
+						motionSensorAckCount++;	
 					}
 				}catch(Exception e){
 					System.out.println("Error while sending message");
@@ -219,7 +220,7 @@ class SecurityMonitor extends Thread
 									Message msg = new Message((int) 14, "D1");
 									em.SendMessage(MessageEncryptor.encryptMsg(msg));
 									di.SetLampColorAndMessage("DS-ALERT!", 3);
-									doorSensorCount = 0;
+									doorMessageSent = true;
 								}
 							} // try
 							catch (Exception e) {
@@ -234,7 +235,7 @@ class SecurityMonitor extends Thread
 							 		Message msg = new Message((int) 15, "W1");
 									em.SendMessage(MessageEncryptor.encryptMsg(msg));
 									wi.SetLampColorAndMessage("WS-ALERT!", 3);
-									windowSensorCount = 0;
+									windowMessageSent = true;
 								}
 
 							} // try
@@ -253,7 +254,7 @@ class SecurityMonitor extends Thread
 									Message msg = new Message((int) 16, "M1");
 									em.SendMessage(MessageEncryptor.encryptMsg(msg));
 									mi.SetLampColorAndMessage("MS-ALERT!", 3);
-									motionSensorCount = 0;
+									motionMessageSent = true;
 								}
 
 							} // try
@@ -271,6 +272,7 @@ class SecurityMonitor extends Thread
 								if (Msg.GetMessage().equalsIgnoreCase("D1_ACK")) {
 									message = "D1 Ack message received from the controller";
 									doorSensorAckCount = 0;
+									doorMessageSent = false;
 								}
 
 							} // try
@@ -286,6 +288,7 @@ class SecurityMonitor extends Thread
 								if (Msg.GetMessage().equalsIgnoreCase("M1_ACK")) {
 									message = "M1 Ack message received from the controller";
 									motionSensorAckCount = 0;
+									motionMessageSent = true;
 								}
 
 							} // try
@@ -302,6 +305,7 @@ class SecurityMonitor extends Thread
 								if (Msg.GetMessage().equalsIgnoreCase("W1_ACK")) {
 									message = "W1 Ack message received from the controller";
 									windowSensorAckCount = 0;
+									windowMessageSent = true;
 								}
 
 							} // try
