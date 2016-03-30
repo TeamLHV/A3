@@ -42,6 +42,7 @@ class TemperatureSensor
 		float DriftValue;				// The amount of temperature gained or lost
 		int	Delay = 2500;				// The loop delay (2.5 seconds)
 		boolean Done = false;			// Loop termination flag
+		String senderDesc = "TemperatureSensor";
 
 		/////////////////////////////////////////////////////////////////////////////////
 		// Get the IP address of the message manager
@@ -210,6 +211,25 @@ class TemperatureSensor
 						} // if
 
 					} // if
+					
+					if ( Msg.GetMessageId() == 66 )
+					{
+
+						try
+						{
+							AckMessage( em, senderDesc );
+
+				    	} // try
+
+				    	catch (Exception e)
+				    	{
+							mw.WriteMessage("Error unregistering: " + e);
+
+				    	} // catch
+
+				    	mw.WriteMessage("\n\nSimulation Stopped. \n");
+
+					} // if
 
 					// If the message ID == 99 then this is a signal that the simulation
 					// is to end. At this point, the loop termination flag is set to
@@ -374,5 +394,27 @@ class TemperatureSensor
 		} // catch
 
 	} // PostTemperature
+	
+	static private void AckMessage(MessageManagerInterface ei, String m )
+	{
+		// Here we create the message.
+
+		Message msg = new Message( (int) -66, m );
+
+		// Here we send the message to the message manager.
+
+		try
+		{
+			ei.SendMessage( msg );
+
+		} // try
+
+		catch (Exception e)
+		{
+			System.out.println("Error Confirming Message:: " + e);
+
+		} // catch
+
+	} // AckMessage
 
 } // TemperatureSensor

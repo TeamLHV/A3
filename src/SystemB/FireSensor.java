@@ -15,6 +15,7 @@ public class FireSensor {
 		MessageManagerInterface em = null;
 		boolean Done = false; // Loop termination flag
 		boolean isSprinklerOn = false;
+		String senderDesc = "FireSensor";
 
 		/////////////////////////////////////////////////////////////////////////////////
 		// Get the IP address of the message manager
@@ -139,6 +140,25 @@ public class FireSensor {
 							isSprinklerOn = true;
 						}
 					}
+					
+					if ( Msg.GetMessageId() == 66 )
+					{
+
+						try
+						{
+							AckMessage( em, senderDesc );
+
+				    	} // try
+
+				    	catch (Exception e)
+				    	{
+							mw.WriteMessage("Error unregistering: " + e);
+
+				    	} // catch
+
+				    	mw.WriteMessage("\n\nSimulation Stopped. \n");
+
+					} // if
 
 					if (Msg.GetMessageId() == 99) {
 						Done = true;
@@ -195,5 +215,28 @@ public class FireSensor {
 		} // catch
 
 	}
+	
+	static private void AckMessage(MessageManagerInterface ei, String m )
+	{
+		// Here we create the message.
+
+		Message msg = new Message( (int) -66, m );
+
+		// Here we send the message to the message manager.
+
+		try
+		{
+			msg.SetEncryptedToken(MessageEncryptor.encrypt(String.valueOf(msg.GetMessageId())));
+			ei.SendMessage( msg );
+
+		} // try
+
+		catch (Exception e)
+		{
+			System.out.println("Error Confirming Message:: " + e);
+
+		} // catch
+
+	} // AckMessage
 
 }

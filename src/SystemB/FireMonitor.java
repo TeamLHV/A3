@@ -33,6 +33,7 @@ class FireMonitor extends Thread {
 	Indicator si; // Sprinkler indicator
 	private Message pendingMsg = null;
 	private int noSensorMessage = 0;
+	String senderDesc = "FireMonitor";
 
 	public FireMonitor(FireConsole console) {
 		// message manager is on the local system
@@ -156,6 +157,16 @@ class FireMonitor extends Thread {
 							isOnFire = true;
 						}
 					} // if
+					
+					if (Msg.GetMessageId() == 66)
+					{
+						//mw.WriteMessage("Received ping message" );
+
+						// Confirm that the message was recieved and acted on
+
+						AckMessage( em, senderDesc );
+
+					} // try
 
 					// If the message ID == 99 then this is a signal that the
 					// simulation
@@ -321,5 +332,28 @@ class FireMonitor extends Thread {
 		pendingMsg = MessageEncryptor.encryptMsg(msg);
 
 	} // Humidifier
+	
+	static private void AckMessage(MessageManagerInterface ei, String m )
+	{
+		// Here we create the message.
+
+		Message msg = new Message( (int) -66, m );
+
+		// Here we send the message to the message manager.
+
+		try
+		{
+			msg.SetEncryptedToken(MessageEncryptor.encrypt(String.valueOf(msg.GetMessageId())));
+			ei.SendMessage( msg );
+
+		} // try
+
+		catch (Exception e)
+		{
+			System.out.println("Error Confirming Message:: " + e);
+
+		} // catch
+
+	} // AckMessage
 
 } // ECSMonitor

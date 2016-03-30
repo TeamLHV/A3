@@ -30,6 +30,8 @@
 ******************************************************************************************************************/
 import InstrumentationPackage.*;
 import MessagePackage.*;
+import SecurityPackage.MessageEncryptor;
+
 import java.util.*;
 
 class HumidityController
@@ -45,6 +47,7 @@ class HumidityController
 		boolean DehumidifierState = false;	// Dehumidifier state: false == off, true == on
 		int	Delay = 2500;					// The loop delay (2.5 seconds)
 		boolean Done = false;				// Loop termination flag
+		String senderDesc = "HumidityController";
 
 		/////////////////////////////////////////////////////////////////////////////////
 		// Get the IP address of the message manager
@@ -164,6 +167,17 @@ class HumidityController
 				for ( int i = 0; i < qlen; i++ )
 				{
 					Msg = eq.GetMessage();
+					
+					try {
+						if (!MessageEncryptor.isGranted(Msg))
+						{
+							mw.WriteMessage("Intrusion!!!");
+							continue;
+						}
+					} catch (Exception e1) {
+						continue;
+					}
+					
 
 					if ( Msg.GetMessageId() == 4 )
 					{
@@ -212,6 +226,17 @@ class HumidityController
 						} // if
 
 					} // if
+                                        
+                                        if ( Msg.GetMessageId() == 66 )
+					{
+                                            mw.WriteMessage("Received ping message" );
+
+                                            // Confirm that the message was recieved and acted on
+
+                                            AckMessage( em, senderDesc );
+
+				    	} // try
+                                        
 
 					// If the message ID == 99 then this is a signal that the simulation
 					// is to end. At this point, the loop termination flag is set to
@@ -323,6 +348,7 @@ class HumidityController
 
 		try
 		{
+			msg.SetEncryptedToken(MessageEncryptor.encrypt(String.valueOf(msg.GetMessageId())));
 			ei.SendMessage( msg );
 
 		} // try
@@ -334,5 +360,28 @@ class HumidityController
 		} // catch
 
 	} // PostMessage
+        
+        static private void AckMessage(MessageManagerInterface ei, String m )
+	{
+		// Here we create the message.
+
+		Message msg = new Message( (int) -66, m );
+
+		// Here we send the message to the message manager.
+
+		try
+		{
+			msg.SetEncryptedToken(MessageEncryptor.encrypt(String.valueOf(msg.GetMessageId())));
+			ei.SendMessage( msg );
+
+		} // try
+
+		catch (Exception e)
+		{
+			System.out.println("Error Confirming Message:: " + e);
+
+		} // catch
+
+	} // AckMessage
 
 } // HumidityControllers

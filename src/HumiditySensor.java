@@ -41,6 +41,7 @@ class HumiditySensor
 		float DriftValue;					// The amount of humidity gained or lost
 		int	Delay = 2500;					// The loop delay (2.5 seconds)
 		boolean Done = false;				// Loop termination flag
+		String senderDesc = "HumiditySensor";
 
 
 
@@ -182,6 +183,8 @@ class HumiditySensor
 				for ( int i = 0; i < qlen; i++ )
 				{
 					Msg = eq.GetMessage();
+					
+					
 
 					if ( Msg.GetMessageId() == -4 )
 					{
@@ -210,6 +213,16 @@ class HumiditySensor
 						} // if
 
 					} // if
+                                        
+                                        if ( Msg.GetMessageId() == 66 )
+					{
+                                            mw.WriteMessage("Received ping message" );
+
+                                            // Confirm that the message was recieved and acted on
+
+                                            AckMessage( em, senderDesc );
+
+				    	} // if
 
 					// If the message ID == 99 then this is a signal that the simulation
 					// is to end. At this point, the loop termination flag is set to
@@ -370,5 +383,27 @@ class HumiditySensor
 		} // catch
 
 	} // PostHumidity
+        
+        static private void AckMessage(MessageManagerInterface ei, String m )
+	{
+		// Here we create the message.
+
+		Message msg = new Message( (int) -66, m );
+
+		// Here we send the message to the message manager.
+
+		try
+		{
+			ei.SendMessage( msg );
+
+		} // try
+
+		catch (Exception e)
+		{
+			System.out.println("Error Confirming Message:: " + e);
+
+		} // catch
+
+	} // AckMessage
 
 } // Humidity Sensor

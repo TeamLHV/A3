@@ -33,6 +33,7 @@ class SprinklerController {
 		int Delay = 1000; // The loop delay (1 seconds)
 		boolean Done = false; // Loop termination flag
 		boolean SprinklerOn = false;
+		String senderDesc = "SprinklerController";
 
 		/////////////////////////////////////////////////////////////////////////////////
 		// Get the IP address of the message manager
@@ -161,6 +162,16 @@ class SprinklerController {
 						} // if
 
 					} // if
+					
+					if ( Msg.GetMessageId() == 66 )
+					{
+						mw.WriteMessage("Received ping message" );
+
+						// Confirm that the message was recieved and acted on
+
+						AckMessage( em, senderDesc );
+
+					} // try
 
 					// If the message ID == 99 then this is a signal that the
 					// simulation
@@ -262,5 +273,27 @@ class SprinklerController {
 		} // catch
 
 	} // PostMessage
+	
+	static private void AckMessage(MessageManagerInterface ei, String m )
+	{
+		// Here we create the message.
+
+		Message msg = new Message( (int) -66, m );
+
+		// Here we send the message to the message manager.
+
+		try
+		{
+			ei.SendMessage( msg );
+
+		} // try
+
+		catch (Exception e)
+		{
+			System.out.println("Error Confirming Message:: " + e);
+
+		} // catch
+
+	} // AckMessage
 
 } // HumidityControllers

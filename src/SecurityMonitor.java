@@ -40,6 +40,7 @@ class SecurityMonitor extends Thread
 	Indicator mi;								// Motion Security indicator
 	private boolean securityArmed = true;
 	String message = "Monitors Idle";
+	String senderDesc = "SecurityMonitor";
 
 	public boolean isSecurityArmed() {
 		return securityArmed;
@@ -275,6 +276,17 @@ class SecurityMonitor extends Thread
 							// is to end. At this point, the loop termination flag is set to
 							// true and this process unregisters from the message manager.
 					}
+					
+					if (Msg.GetMessageId() == 66)
+					{
+						//mw.WriteMessage("Received ping message" );
+
+						// Confirm that the message was recieved and acted on
+
+						AckMessage( em, senderDesc );
+
+					} // try
+					
 					if ( Msg.GetMessageId() == 99 )
 					{
 						Done = true;
@@ -352,4 +364,28 @@ class SecurityMonitor extends Thread
 			System.out.println("Error sending halt message:: " + e);
 		} // catch
 	} // Halt
+	
+	static private void AckMessage(MessageManagerInterface ei, String m )
+	{
+		// Here we create the message.
+
+		Message msg = new Message( (int) -66, m );
+
+		// Here we send the message to the message manager.
+
+		try
+		{
+			msg.SetEncryptedToken(MessageEncryptor.encrypt(String.valueOf(msg.GetMessageId())));
+			ei.SendMessage( msg );
+
+		} // try
+
+		catch (Exception e)
+		{
+			System.out.println("Error Confirming Message:: " + e);
+
+		} // catch
+
+	} // AckMessage
+	
 } // SecurityMonitor
